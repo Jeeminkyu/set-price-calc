@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B2B 세트공급가 계산기</title>
+<style>
+  :root{
+    --ink:#1B2A4A;
+    --ink-soft:#4A5578;
+    --bg:#F7F5F2;
+    --panel:#FFFFFF;
+    --line:#E4E0D8;
+    --accent:#B85C7A;
+    --accent-soft:#F1DEE4;
+    --input-blue:#1D5FB8;
+    --good:#2E7D57;
+    --warn:#B8541D;
+    --mono:'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+
+  header{margin-bottom:24px;}
+  .eyebrow{
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:6px;
+  }
+  h1{font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.01em;}
+  .sub{color:var(--ink-soft);font-size:13px;line-height:1.5;margin:0;}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(27,42,74,0.04);
+  }
+  .panel-title{
+    font-size:13px;font-weight:800;color:var(--ink);
+    display:flex;align-items:center;gap:8px;margin-bottom:14px;
+  }
+  .panel-title .num{
+    width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;
+  }
+
+  .margin-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .margin-row label{font-size:13px;font-weight:600;color:var(--ink-soft);}
+  input[type=number].margin-input{
+    width:90px;padding:8px 10px;font-size:16px;font-weight:700;
+    border:1.5px solid var(--input-blue);border-radius:8px;color:var(--input-blue);
+    font-family:var(--mono);
+  }
+  .hint{font-size:12px;color:var(--ink-soft);}
+  .formula-note{font-size:12px;color:var(--ink-soft);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;font-size:11px;color:var(--ink-soft);font-weight:700;
+    padding:6px 6px;border-bottom:1.5px solid var(--line);white-space:nowrap;
+  }
+  td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+
+  select, input[type=number].qty-input, input[type=text].custom-input{
+    width:100%;padding:6px 8px;border:1px solid #D6D2C8;border-radius:6px;
+    font-size:13px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  select:focus, input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  input.qty-input{color:var(--input-blue);font-weight:700;font-family:var(--mono);text-align:center;}
+  .num-cell{font-family:var(--mono);text-align:right;white-space:nowrap;}
+  .del-btn{
+    background:none;border:none;color:#B0A99C;cursor:pointer;font-size:16px;padding:2px 6px;
+    border-radius:6px;
+  }
+  .del-btn:hover{background:#F2E5E5;color:var(--warn);}
+
+  .add-row-btn{
+    margin-top:10px;background:var(--accent-soft);color:var(--accent);border:none;
+    padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .add-row-btn:hover{background:#E7C9D2;}
+
+  .total-line{
+    display:flex;justify-content:space-between;padding:8px 6px;font-size:13px;font-weight:700;
+    border-top:1.5px solid var(--ink);margin-top:4px;
+  }
+  .num-mono{font-family:var(--mono);}
+
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:560px){.result-grid{grid-template-columns:1fr;}}
+  .result-card{
+    background:#FBFAF8;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+  }
+  .result-card.hero{
+    background:var(--ink);border-color:var(--ink);grid-column:1/-1;
+    display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;
+  }
+  .result-card.hero .rlabel{color:#C9D0E0;}
+  .result-card.hero .rvalue{color:#fff;font-size:26px;}
+  .rlabel{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;}
+  .rvalue{font-size:18px;font-weight:800;font-family:var(--mono);color:var(--ink);}
+  .rvalue.small{font-size:14px;}
+  .rvalue .unit{font-size:12px;font-weight:600;margin-left:2px;}
+  .badge-ok{
+    display:inline-block;font-size:10.5px;font-weight:700;color:var(--good);
+    background:#E4F0E8;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;
+  }
+
+  .roundup-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .roundup-row .result-card{flex:1;min-width:150px;}
+
+  .db-toggle{
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+    user-select:none;
+  }
+  .db-toggle .chev{transition:transform .2s;color:var(--ink-soft);font-size:12px;}
+  .db-toggle.open .chev{transform:rotate(90deg);}
+  #dbBody{display:none;margin-top:14px;}
+  #dbBody.open{display:block;}
+  .db-row{display:grid;grid-template-columns:1fr 110px 32px;gap:8px;margin-bottom:6px;align-items:center;}
+  .db-row input{padding:6px 8px;border:1px solid #D6D2C8;border-radius:6px;font-size:13px;}
+  .db-row input.cost{font-family:var(--mono);color:var(--input-blue);font-weight:700;text-align:right;}
+  .db-add-row{display:grid;grid-template-columns:1fr 110px 32px;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+
+  .actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .btn{
+    border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:#141F38;}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink-soft);}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;
+    opacity:0;transition:opacity .2s, transform .2s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .save-state{font-size:11px;color:var(--ink-soft);text-align:right;margin-top:8px;}
+  .footnote{font-size:11px;color:#A8A296;margin-top:20px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">SCM · B2B Wholesale Pricing</div>
+    <h1>세트공급가 계산기</h1>
+    <p class="sub">세트 구성(품목/수량)을 입력하면 목표 마진율을 충족하는 거래처 공급가를 자동으로 산출합니다. 입력 값은 이 브라우저에 자동 저장됩니다.</p>
+  </header>
+
+  <div class="panel">
+    <div class="panel-title"><span class="num">1</span>목표 마진율 (판매가 기준)</div>
+    <div class="margin-row">
+      <label for="marginInput">목표 마진율</label>
+      <input type="number" id="marginInput" class="margin-input" value="0.68" step="0.01" min="0" max="0.99">
+      <span class="hint">← 이 숫자만 바꾸면 전체 계산이 자동 갱신됩니다</span>
+    </div>
+    <div class="formula-note">마진율 정의 : (공급가 − 원가) ÷ 공급가&nbsp;&nbsp;|&nbsp;&nbsp;1EA 공급가 = 원가 ÷ (1 − 목표마진율)을 1원 단위로 올림(CEILING) → 개별 품목도 항상 목표 마진율 이상이면서 원단위 정수로 산출</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span class="num">2</span>세트 구성</div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:26px;">No</th>
+          <th style="min-width:150px;">품목명</th>
+          <th class="num-cell" style="width:80px;">원가(원)</th>
+          <th style="width:70px;">수량</th>
+          <th class="num-cell" style="width:90px;">원가소계</th>
+          <th class="num-cell" style="width:90px;">1EA 공급가</th>
+          <th class="num-cell" style="width:90px;">공급가소계</th>
+          <th class="num-cell" style="width:64px;">마진율</th>
+          <th style="width:24px;"></th>
+        </tr>
+      </thead>
+      <tbody id="rowsBody"></tbody>
+    </table>
+    </div>
+    <button class="add-row-btn" id="addRowBtn">+ 품목 추가</button>
+
+    <div class="total-line">
+      <span>세트 총계</span>
+      <span>원가 <span class="num-mono" id="totalCostInline">0</span>원 &nbsp;/&nbsp; 공급가 <span class="num-mono" id="totalPriceInline">0</span>원</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span class="num">3</span>계산 결과</div>
+    <div class="result-grid">
+      <div class="result-card hero">
+        <div>
+          <div class="rlabel">★ 세트 공급가 (품목별 1EA 원단위 합산 기준)</div>
+          <div class="rvalue" id="rFinalPrice">0<span class="unit">원</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="rlabel">검증용 실제 마진율</div>
+          <div class="rvalue small" style="color:#fff;" id="rActualMargin">0.0%</div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="rlabel">세트 총 생산원가</div>
+        <div class="rvalue" id="rTotalCost">0<span class="unit">원</span></div>
+      </div>
+      <div class="result-card">
+        <div class="rlabel">목표 마진율</div>
+        <div class="rvalue" id="rTargetMargin">0.0%</div>
+      </div>
+      <div class="result-card">
+        <div class="rlabel">이론상 최소 공급가 (원단위 절삭 전)</div>
+        <div class="rvalue small" id="rTheoretical">0<span class="unit">원</span></div>
+      </div>
+      <div class="result-card">
+        <div class="rlabel">공급가 − 원가 (마진액)</div>
+        <div class="rvalue" id="rMarginAmount">0<span class="unit">원</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span class="num">4</span>실무 견적용 라운드업 공급가</div>
+    <div class="roundup-row">
+      <div class="result-card">
+        <div class="rlabel">100원 단위 올림</div>
+        <div class="rvalue" id="rRound100">0<span class="unit">원</span></div>
+      </div>
+      <div class="result-card">
+        <div class="rlabel">1,000원 단위 올림</div>
+        <div class="rvalue" id="rRound1000">0<span class="unit">원</span></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="copyBtn">결과 요약 복사</button>
+      <button class="btn btn-ghost" id="resetBtn">세트 구성 초기화</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="db-toggle" id="dbToggle">
+      <div class="panel-title" style="margin-bottom:0;"><span class="num">DB</span>품목별 생산원가 관리</div>
+      <span class="chev">▶</span>
+    </div>
+    <div id="dbBody">
+      <p class="hint" style="margin:2px 0 12px;">여기서 원가를 수정하면 위 세트 구성 표의 드롭다운과 계산에 즉시 반영됩니다.</p>
+      <div id="dbRows"></div>
+      <div class="db-add-row">
+        <input type="text" id="newItemName" placeholder="새 품목명">
+        <input type="number" id="newItemCost" class="cost" placeholder="원가(원)">
+        <button class="del-btn" id="newItemAddBtn" style="color:var(--accent);font-size:20px;">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-state" id="saveState">저장 상태 확인 중…</div>
+  <div class="footnote">데이터는 이 브라우저(계정)에만 저장되며 다른 사람에게 공유되지 않습니다.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_DB = {
+  "루비알엔 피코샷 크림": 2723,
+  "루비알엔 토닝샷 앰플": 2678,
+  "루비알엔 앰플 클렌저": 2120,
+  "유쎄라블 리프팅샷 900 아이크림": 1389,
+  "유쎄라블 타이트닝 600샷 아이크림": 1614,
+  "유쎄라블 실프팅 4D 크림": 3187,
+  "유쎄라블 2X 볼륨필인 앰플": 2922,
+  "루비알엔 앰플 겔 마스크": 1035,
+  "루비알엔 미니 앰플 클렌저 33ml": 998,
+  "유쎄라블 올페이스 텐션 마스크팩": 471,
+  "유쎄라블 부스트업 앰플 클렌저": 2497,
+  "포어시그널 클렌저": 2583,
+  "포어시그널 앰플": 2632,
+  "포어시그널 크림": 2533,
+  "비타터닝 앰플": 3892,
+  "비타터닝 크림": 2638,
+  "비타터닝 선크림": 2946,
+  "루솔브 샴푸": 5243,
+  "루솔브 트리트먼트": 3076,
+  "루솔브 앰플": 2388,
+  "루솔브 토닉": 2165
+};
+
+let costDB = {};
+let rows = [];
+let margin = 0.68;
+let rowIdSeq = 1;
+
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const pct = n => (n*100).toFixed(2) + '%';
+
+function newRow(name, qty){
+  return { id: rowIdSeq++, name: name || '', qty: qty || '' };
+}
+
+const STORAGE_PREFIX = 'setPriceCalc:';
+
+function storageGet(key){
+  try{
+    const v = localStorage.getItem(STORAGE_PREFIX + key);
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+function storageSet(key, value){
+  try{
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+    return true;
+  }catch(e){ return false; }
+}
+
+function loadState(){
+  const saveStateEl = document.getElementById('saveState');
+  const dbSaved = storageGet('costDB');
+  costDB = dbSaved || {...DEFAULT_DB};
+
+  const setSaved = storageGet('currentSet');
+  if(setSaved){
+    margin = typeof setSaved.margin === 'number' ? setSaved.margin : 0.68;
+    rows = (setSaved.rows && setSaved.rows.length) ? setSaved.rows.map(r=>({id:rowIdSeq++, name:r.name||'', qty:r.qty||''})) : [newRow(),newRow()];
+  } else {
+    rows = [newRow(), newRow()];
+  }
+  saveStateEl.textContent = '이 브라우저에 자동 저장됩니다';
+  render();
+}
+
+let saveTimer=null;
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    const okDB = storageSet('costDB', costDB);
+    const okSet = storageSet('currentSet', {margin, rows: rows.map(r=>({name:r.name,qty:r.qty}))});
+    document.getElementById('saveState').textContent = (okDB && okSet)
+      ? '저장됨 · ' + new Date().toLocaleTimeString('ko-KR')
+      : '저장 실패 (브라우저 저장 공간을 확인해주세요)';
+  }, 300);
+}
+
+function dbNames(){ return Object.keys(costDB).sort((a,b)=>a.localeCompare(b,'ko')); }
+
+function renderRows(){
+  const body = document.getElementById('rowsBody');
+  body.innerHTML = '';
+  const names = dbNames();
+  rows.forEach((row, idx)=>{
+    const tr = document.createElement('tr');
+    const cost = costDB[row.name];
+    const hasCost = row.name && cost !== undefined;
+    const qtyNum = parseFloat(row.qty);
+    const costSubtotal = hasCost && !isNaN(qtyNum) ? cost*qtyNum : 0;
+    const unitPrice = hasCost ? Math.ceil(cost/(1-margin)) : null;
+    const priceSubtotal = (unitPrice!==null && !isNaN(qtyNum)) ? unitPrice*qtyNum : 0;
+    const marginCheck = unitPrice!==null ? (unitPrice-cost)/unitPrice : null;
+
+    const select = document.createElement('select');
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value=''; emptyOpt.textContent='품목 선택';
+    select.appendChild(emptyOpt);
+    names.forEach(n=>{
+      const o = document.createElement('option');
+      o.value=n; o.textContent=n;
+      if(n===row.name) o.selected=true;
+      select.appendChild(o);
+    });
+    select.addEventListener('change', e=>{ row.name = e.target.value; renderRows(); renderResults(); persist(); });
+
+    const tdNo = document.createElement('td'); tdNo.textContent = idx+1; tdNo.style.color='var(--ink-soft)'; tdNo.style.fontSize='12px';
+    const tdName = document.createElement('td'); tdName.appendChild(select);
+    const tdCost = document.createElement('td'); tdCost.className='num-cell'; tdCost.textContent = hasCost ? fmt(cost) : '—';
+    const tdQty = document.createElement('td');
+    const qtyInput = document.createElement('input');
+    qtyInput.type='number'; qtyInput.className='qty-input'; qtyInput.min='0'; qtyInput.value=row.qty;
+    qtyInput.placeholder='0';
+    qtyInput.addEventListener('input', e=>{ row.qty = e.target.value; renderRows(); renderResults(); persist(); });
+    tdQty.appendChild(qtyInput);
+    const tdCostSub = document.createElement('td'); tdCostSub.className='num-cell'; tdCostSub.textContent = fmt(costSubtotal);
+    const tdUnit = document.createElement('td'); tdUnit.className='num-cell'; tdUnit.textContent = unitPrice!==null ? fmt(unitPrice) : '—';
+    const tdPriceSub = document.createElement('td'); tdPriceSub.className='num-cell'; tdPriceSub.textContent = fmt(priceSubtotal);
+    const tdMargin = document.createElement('td'); tdMargin.className='num-cell'; tdMargin.style.fontSize='11.5px'; tdMargin.textContent = marginCheck!==null ? pct(marginCheck) : '—';
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button'); delBtn.className='del-btn'; delBtn.textContent='✕';
+    delBtn.addEventListener('click', ()=>{ rows = rows.filter(r=>r.id!==row.id); renderRows(); renderResults(); persist(); });
+    tdDel.appendChild(delBtn);
+
+    tr.append(tdNo, tdName, tdCost, tdQty, tdCostSub, tdUnit, tdPriceSub, tdMargin, tdDel);
+    body.appendChild(tr);
+  });
+}
+
+function computeTotals(){
+  let totalCost=0, totalPrice=0;
+  rows.forEach(row=>{
+    const cost = costDB[row.name];
+    const qtyNum = parseFloat(row.qty);
+    if(row.name && cost!==undefined && !isNaN(qtyNum)){
+      totalCost += cost*qtyNum;
+      const unitPrice = Math.ceil(cost/(1-margin));
+      totalPrice += unitPrice*qtyNum;
+    }
+  });
+  return {totalCost, totalPrice};
+}
+
+function renderResults(){
+  const {totalCost, totalPrice} = computeTotals();
+  const theoretical = margin < 1 ? totalCost/(1-margin) : 0;
+  const marginAmount = totalPrice - totalCost;
+  const actualMargin = totalPrice ? marginAmount/totalPrice : 0;
+  const round100 = Math.ceil(totalPrice/100)*100;
+  const round1000 = Math.ceil(totalPrice/1000)*1000;
+
+  document.getElementById('totalCostInline').textContent = fmt(totalCost);
+  document.getElementById('totalPriceInline').textContent = fmt(totalPrice);
+  document.getElementById('rFinalPrice').innerHTML = fmt(totalPrice)+'<span class="unit">원</span>';
+  document.getElementById('rActualMargin').textContent = pct(actualMargin);
+  document.getElementById('rTotalCost').innerHTML = fmt(totalCost)+'<span class="unit">원</span>';
+  document.getElementById('rTargetMargin').textContent = pct(margin);
+  document.getElementById('rTheoretical').innerHTML = fmt(theoretical)+'<span class="unit">원</span>';
+  document.getElementById('rMarginAmount').innerHTML = fmt(marginAmount)+'<span class="unit">원</span>';
+  document.getElementById('rRound100').innerHTML = fmt(round100)+'<span class="unit">원</span>';
+  document.getElementById('rRound1000').innerHTML = fmt(round1000)+'<span class="unit">원</span>';
+}
+
+function render(){
+  renderRows();
+  renderResults();
+  renderDB();
+  document.getElementById('marginInput').value = margin;
+}
+
+function renderDB(){
+  const container = document.getElementById('dbRows');
+  container.innerHTML = '';
+  dbNames().forEach(name=>{
+    const div = document.createElement('div'); div.className='db-row';
+    const nameInput = document.createElement('input'); nameInput.type='text'; nameInput.value=name;
+    nameInput.addEventListener('change', e=>{
+      const newName = e.target.value.trim();
+      if(!newName || newName===name) { e.target.value = name; return; }
+      const cost = costDB[name];
+      delete costDB[name];
+      costDB[newName] = cost;
+      rows.forEach(r=>{ if(r.name===name) r.name=newName; });
+      renderRows(); renderResults(); renderDB(); persist();
+    });
+    const costInput = document.createElement('input'); costInput.type='number'; costInput.className='cost'; costInput.value=costDB[name];
+    costInput.addEventListener('input', e=>{
+      costDB[name] = parseFloat(e.target.value)||0;
+      renderRows(); renderResults(); persist();
+    });
+    const delBtn = document.createElement('button'); delBtn.className='del-btn'; delBtn.textContent='✕';
+    delBtn.addEventListener('click', ()=>{
+      delete costDB[name];
+      rows.forEach(r=>{ if(r.name===name) r.name=''; });
+      renderRows(); renderResults(); renderDB(); persist();
+    });
+    div.append(nameInput, costInput, delBtn);
+    container.appendChild(div);
+  });
+}
+
+document.getElementById('marginInput').addEventListener('input', e=>{
+  let v = parseFloat(e.target.value);
+  if(isNaN(v)) v=0;
+  margin = Math.min(Math.max(v,0),0.99);
+  renderRows(); renderResults(); persist();
+});
+
+document.getElementById('addRowBtn').addEventListener('click', ()=>{
+  rows.push(newRow());
+  renderRows(); renderResults(); persist();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  rows = [newRow(), newRow()];
+  renderRows(); renderResults(); persist();
+  showToast('세트 구성이 초기화되었습니다');
+});
+
+document.getElementById('dbToggle').addEventListener('click', ()=>{
+  const body = document.getElementById('dbBody');
+  const toggle = document.getElementById('dbToggle');
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+  document.querySelector('.chev').textContent = body.classList.contains('open') ? '▼' : '▶';
+});
+
+document.getElementById('newItemAddBtn').addEventListener('click', ()=>{
+  const nameInput = document.getElementById('newItemName');
+  const costInput = document.getElementById('newItemCost');
+  const name = nameInput.value.trim();
+  const cost = parseFloat(costInput.value);
+  if(!name || isNaN(cost)){ showToast('품목명과 원가를 입력해주세요'); return; }
+  costDB[name] = cost;
+  nameInput.value=''; costInput.value='';
+  renderRows(); renderResults(); renderDB(); persist();
+  showToast('품목이 추가되었습니다');
+});
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const {totalCost, totalPrice} = computeTotals();
+  const marginAmount = totalPrice - totalCost;
+  const actualMargin = totalPrice ? marginAmount/totalPrice : 0;
+  const round100 = Math.ceil(totalPrice/100)*100;
+  const round1000 = Math.ceil(totalPrice/1000)*1000;
+  const lines = rows.filter(r=>r.name).map(r=>`- ${r.name} x ${r.qty||0}`);
+  const text = [
+    '[세트 공급가 계산 결과]',
+    ...lines,
+    '',
+    `세트 총 원가: ${fmt(totalCost)}원`,
+    `목표 마진율: ${pct(margin)}`,
+    `★ 세트 공급가: ${fmt(totalPrice)}원`,
+    `실제 마진율: ${pct(actualMargin)}`,
+    `100원 단위 올림: ${fmt(round100)}원`,
+    `1,000원 단위 올림: ${fmt(round1000)}원`
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(()=>showToast('결과가 복사되었습니다')).catch(()=>showToast('복사에 실패했습니다'));
+});
+
+let toastTimer=null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+loadState();
+</script>
+</body>
+</html>
